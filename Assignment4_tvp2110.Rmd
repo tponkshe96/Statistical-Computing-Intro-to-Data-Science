@@ -1,0 +1,141 @@
+---
+title: "Assignment 4"
+author: "Tushar Ponkshe, tvp2110"
+date: "October 25, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(dplyr)
+setwd("C:/Users/tusha/OneDrive/Documents/Columbia Fall 2018 Courses/STAT COMP & INTRO TO DATA SCIENCE/Datasets")
+debt <- read.csv("debt.csv", as.is = TRUE)
+dim(debt)
+head(debt)
+```
+
+**1.**
+```{r}
+#signif(debt, digits = 3)
+#a
+mean.growth = function(x) {
+  mean(x[,"growth"])
+}
+signif(mean.growth(debt),3)
+
+
+#b
+require(plyr)
+signif(daply(debt, .(Country), mean.growth), 3)
+
+#Checking results
+#mean(debt$growth[debt$Country=="Australia"])
+```
+
+**2.**
+```{r}
+library(ggplot2)
+yearly.growth = daply(debt, .(Year), mean.growth)
+signif(yearly.growth, 3)
+Years = unique(debt$Year)
+#ggplot(yearly.growth, aes(x = Years, y = mean.growth)) + geom_line()
+plot(Years, yearly.growth, xlab = "year", ylab = "growth rates")
+```
+
+**3.**
+```{r}
+#a
+#newdebt = na.omit(debt)
+func = function(x) {
+  cor(x$growth, x$ratio)
+}
+
+signif(func(debt), 3)
+#b
+cor.country = daply(debt, .(Country), func)
+signif(head(cor.country), 3)
+signif(mean(cor.country),3)
+
+hist(cor.country, breaks = 10, xlab = "Correlation coefficient by country")
+
+#c
+cor.year = daply(debt, .(Year), func)
+signif(head(cor.year), 3)
+signif(mean(cor.year), 3)
+hist(cor.year, xlab = "Correlation coefficient by year")
+```
+
+#d
+The correlation coefficient of correlation for Norway seems to be very high compared to the rest  
+
+**4.**
+```{r}
+fit = lm(debt$growth~debt$ratio)
+signif(fit$coefficients, 3)
+
+plot(debt$ratio, debt$growth, ylab = "GDP growth", xlab = "debt ratio")
+abline(fit, col = 2)
+```
+
+**5.**
+```{r}
+four.countries = cor.country[which(cor.country < -0.5)]
+signif(four.countries, 3)
+
+by.country = split(debt, debt$Country)
+
+par(mfrow=c(2,2))
+plot(by.country$France$ratio, by.country$France$growth, main = "France", xlab = "debt ratio", ylab = "GDP growth")
+plot(by.country$Germany$ratio, by.country$Germany$growth, main = "Germany", xlab = "debt ratio", ylab = "GDP growth")
+plot(by.country$Italy$ratio, by.country$Italy$growth, main = "Italy", xlab = "debt ratio", ylab = "GDP growth")
+plot(by.country$Japan$ratio, by.country$Japan$growth, main = "Japan", xlab = "debt ratio", ylab = "GDP growth")
+
+```
+
+**6.**
+```{r}
+library(dplyr)
+#a
+debt.france = by.country$France
+dim(debt.france)
+
+#b
+debt.france$next.growth = mutate(debt.france, next.growth = ifelse((lead(Year) - Year) == 1, lead(growth), NA))
+debt.france[debt.france$Year=="1971","next.growth"]
+```
+
+**7**
+```{r}
+func1 = function(df) {
+  df$next.growth = mutate(df, next.growth = ifelse((lead(Year) - Year) == 1, lead(growth), NA))
+}
+debt.next = ddply(debt, .(Country), func1)
+debt.next[(debt.next$Country=="France" & debt.next$Year=="2009"),]
+```
+
+**8**
+```{r}
+fit2 = lm(debt.next$next.growth~debt$ratio)
+signif(fit2$coefficients,3)
+summary(fit2)
+
+plot(debt$ratio, debt.next$next.growth, ylab = "Next year's GDP growth", xlab = "This year's debt ratio")
+abline(fit2, col=4)
+```
+
+How do they compare to the regression of the current year's growth on the current year's debt ratio?
+- The coefficients for the intercept and the slope for the two linear models are very close in values.
+
+**9**
+```{r}
+fit3 = lm(debt.next$next.growth~debt$growth)
+signif(fit3$coefficients, 3)
+plot(debt$growth, debt.next$next.growth, ylab = "Next year's GDP growth", xlab = "This year's GDP growth")
+abline(fit3, col = 4)
+summary(fit3)
+```
+Current Year's growth is a better predictor for future growth as seen from R squared in summary of the two fits

@@ -1,0 +1,92 @@
+---
+title: 'Homework 5: ggplot Practice'
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+date: "Due 11:59pm, November 14, 2018"
+---
+
+**Instructions: Please submit the pdf file on Gradescope and Rmd file on Canvas.**
+
+## Part 1 (Iris)  
+
+### Background: Edgar Anderson's Iris Data
+
+The R data description follows:
+
+This famous (Fisher's or Anderson's) iris data set gives the measurements in centimeters of the variables sepal length and width and petal length and width, respectively, for 50 flowers from each of 3 species of iris. The species are Iris setosa, versicolor, and virginica.
+
+
+
+### Task 
+
+The purpose of this task is to construct a complex plot using both base **R** graphics and **ggplot**.  Consider the follwoing base **R** plot. 
+
+```{r}
+# Base plot
+plot(iris$Sepal.Length,iris$Petal.Length,col=iris$Species,xlab="Sepal Length",ylab="Petal Length",main="Gabriel's Plot")
+
+# loop to construct each LOBF
+for (i in 1:length(levels(iris$Species))) {
+  extract <- iris$Species==levels(iris$Species)[i]
+  abline(lm(iris$Petal.Length[extract]~iris$Sepal.Length[extract]),col=i)
+  }
+
+# Legend
+legend("right",legend=levels(iris$Species),fill = 1:length(levels(iris$Species)), cex = .75)
+
+# Add points and text
+points(iris$Sepal.Length[15],iris$Petal.Length[15],  pch = "*", col = "black")
+text(iris$Sepal.Length[15]+.4,iris$Petal.Length[15],"(5.8,1.2)",col="black")
+points(iris$Sepal.Length[99],iris$Petal.Length[99],  pch = "*", col = "red")
+text(iris$Sepal.Length[99]+.35,iris$Petal.Length[99],"(5.1,3)",col = "red")
+points(iris$Sepal.Length[107],iris$Petal.Length[107],pch = "*", col = "green")
+text(iris$Sepal.Length[107],iris$Petal.Length[107]+.35,"(4.9,4.5)",col = "green")
+```
+
+
+1) Produce the exact same plot from above using `ggplot` as opposed to Base **R** graphics.  That is, plot **Petal Length** versus **Sepal Length** split by **Species**.  The colors of the points should be split according to **Species**.  Also overlay three regression lines on the plot, one for each **Species** level.  Make sure to include an appropriate legend and labels to the plot.   Note: The function **coef()** extracts the intercept and the slope of an estimated line.      
+
+```{r}
+### your code goes here
+library(ggplot2)
+
+
+basicgg <- ggplot(iris, aes(x = iris$Sepal.Length, y = iris$Petal.Length, color=Species, fill = Species)) + geom_point() + geom_smooth(method = "lm")
+
+basicgg + xlab("Sepal Length") + ylab("Petal Length") + ggtitle("Gabriel's Plot") + geom_point(aes(x=iris$Sepal.Length[15], y = iris$Petal.Length[15]), color = "red", shape = "*") + annotate("text", x = iris$Sepal.Length[15]+.4, y = iris$Petal.Length[15], label = "(5.8,1.2)") + geom_point(aes(x=iris$Sepal.Length[99], y = iris$Petal.Length[99]), color = "green", shape = "*") + annotate("text", x = iris$Sepal.Length[99]+.35, y = iris$Petal.Length[99], label = "(5.1,3)") + geom_point(aes(x=iris$Sepal.Length[107], y = iris$Petal.Length[107]), color = "blue", shape = "*") + annotate("text", x = iris$Sepal.Length[107], y = iris$Petal.Length[107]+.35, label = "(4.9,4.5)")  + theme_minimal()
+```
+
+## Part 2 (World's Richest)
+### Background
+
+We consider a data set containing information about the world's richest people. The data set us taken form the World Top Incomes Database (WTID) hosted by the Paris School of Economics [http://topincomes.g-mond.parisschoolofeconomics.eu]. This is derived from income tax reports, and compiles information about the very highest incomes in various countries over time, trying as hard as possible to produce numbers that are comparable across time and space.
+
+### Tasks 
+
+2) Open the file and make a new variable (dataframe) containing only the year, "P99", "P99.5" and "P99.9" variables; these are the income levels which put someone at the 99th, 99.5th, and 99.9th, percentile of income. What was P99 in 1993? P99.5 in 1942?
+You must identify these using your code rather than looking up the values manually.
+```{r}
+setwd('C:/Users/tusha/OneDrive/Desktop/Data')
+wtid <- read.csv("wtid-report.csv", as.is = TRUE)
+df = wtid[,c("Year", "P99.income.threshold", "P99.5.income.threshold", "P99.9.income.threshold")]
+names(df) = c("Year", "P99", "P99.5", "P99.9")
+df$P99[which(df$Year==1993)]
+df$P99.5[which(df$Year==1942)]
+
+```
+P99 in 1993 was 273534.9 and P99.5 in 1942 was 189140.6
+
+3) Plot the three percentile levels against time using `ggplot`. Make sure the axes are labeled appropriately, and in particular that the horizontal axis is labeled with years between 1913 and 2012, not just numbers from 1 to 100. Also make sure a legend is displayed that describes the multiple time series plot.  Write one or two sentences describing how income inequality has changed throughout time. Remember `library(ggplot2)`.   
+```{r}
+### your code goes here
+library(tidyr)
+library(dplyr)
+
+d <- df %>% select(Year, P99, P99.5, P99.9) %>% gather(key = "variable", value = "value", -Year)
+
+ggplot(d, aes(x = Year, y = value)) + geom_line(aes(color = variable), size = 1) + scale_color_manual(values = c("#AFBB00", "#00AFBB", "#BB00AF")) + theme_minimal() + xlab("Time") + ylab("Income")
+```
+
+From the time series graph, it is evident that the economic growth for all groups constantly increased till the 1980s. However, while the economic growth of the 99.9th percentile group continued to grow strongly beyond 1980, the other two groups suffered greatly due to the 1980s recession

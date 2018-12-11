@@ -1,0 +1,91 @@
+---
+title: "Assignment 1, GR5206"
+author: "Tushar Ponkshe"
+date: "September 18, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Part 1
+(i)
+```{r}
+titanic <- read.table("C:/Users/tusha/OneDrive/Desktop/Data/titanic.txt", header = TRUE)
+is.data.frame(titanic)
+```
+
+(ii)
+```{r}
+nrow(titanic)
+ncol(titanic)
+```
+There are 891 rows and 12 columns
+
+(iii)
+```{r}
+titanic$Survived.Word[titanic$Survived == 0] <- "died"
+titanic$Survived.Word[titanic$Survived == 1] <- "survived"
+mode(titanic$Survived.Word)
+```
+
+
+## Part 2
+
+(i)
+```{r}
+subset <- cbind(titanic$Survived, titanic$Age, titanic$Fare)
+meanofsubset <- apply(subset, 2, mean)
+meanofsubset
+
+```
+Mean of Survived is about 0.38, which means that out of 100 people, 38 people survived. 
+
+The mean value for Age is NA because some entries in Age are NA or missing, and arithmetic functions on missing values yield NA.
+
+(ii)
+```{r}
+survivedfemaleslogical <- titanic$Sex == "female" & titanic$Survived == 1
+survivedfemalesvec <- survivedfemaleslogical[survivedfemaleslogical == TRUE]
+survivedfemales <- length(survivedfemalesvec)
+totalfemaleslogical <- titanic$Sex == "female"
+totalfemalesvec <- totalfemaleslogical[totalfemaleslogical == TRUE]
+totalfemales <- length(totalfemalesvec)
+proportionsurvived <- round(survivedfemales/totalfemales, digits = 2)
+proportionsurvived
+
+```
+The proportion of females passengers who survived is 0.74
+
+(iii)
+```{r}
+totalsurvivors <- length(titanic$Survived[titanic$Survived==1])
+prop_FgivenS <- round(survivedfemales/totalsurvivors, digits=2)
+prop_FgivenS
+
+```
+Of the survivors, the proportion of females that survived is 0.68
+
+(iv)
+```{r}
+classes <- sort(unique(titanic$Pclass))
+Pclass.Survival <- vector("numeric", length = 3)
+names(Pclass.Survival) <- classes
+
+for (i in 1:3) {
+  Pclass.Survival[i] <- round(mean(titanic$Survived[titanic$Pclass == i]), digits = 2)
+}
+Pclass.Survival
+
+```
+
+(v)
+```{r}
+group <- factor(titanic$Pclass)
+survivalrate <- round(tapply(titanic$Survived, group, mean), digits = 2)
+survivalrate
+
+```
+
+(vi) Yes, as the class increases, the survival rate decreases.

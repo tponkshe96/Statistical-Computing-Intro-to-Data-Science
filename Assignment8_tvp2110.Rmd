@@ -1,0 +1,290 @@
+---
+title: "Assignment 8"
+author: "Tushar Ponkshe, tvp2110"
+date: "December 6, 2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+__________________________________
+
+
+**(1)**
+```{r}
+n <- 100
+p <- 10
+s <- 3
+set.seed(0)
+x <- matrix(rnorm(n*p), n, p)
+b <- c(-0.7, 0.7, 1, rep(0, p-s))
+y <- x %*% b + rt(n, df=2)
+
+cors = rep(NA, 10)
+for (i in 1:10) {
+  cors[i] = cor(x[,i],y)
+}
+order(abs(cors), decreasing = TRUE)
+
+```
+
+
+No we would not be able to pick out each of the 3 relevant variables based on correlations alone.
+
+
+______________________
+
+
+**(2)**
+```{r}
+xvals <- seq(-5, 5, by = 1/100)
+plot(xvals, dnorm(xvals), type = "l", xlab = "X range", ylab = "Density")
+curve(dt(x, df = 3), add = TRUE, col = "blue")
+```
+
+We can see from the plot that t-distribution has thicker tails (blue)
+
+**(3)**
+```{r}
+psi <- function(r, c = 1) {
+  return(ifelse(r^2 > c^2, 2*c*abs(r) - c^2, r^2))
+}
+
+huber.loss = function(beta) {
+  sum(psi(y - x %*% beta))
+}
+```
+
+
+____________________________
+
+
+**(4)**
+```{r}
+library(numDeriv)
+
+grad.descent <- function(f, x0, max.iter = 200, step.size = 0.05, stopping.deriv = 0.01, ...) {
+  
+  n    <- length(x0)
+  xmat <- matrix(0, nrow = n, ncol = max.iter)
+  xmat[,1] <- x0
+  
+  for (k in 2:max.iter) {
+    # Calculate the gradient
+    grad.cur <- grad(f, xmat[ ,k-1], ...) 
+    
+    # Should we stop?
+    if (all(abs(grad.cur) < stopping.deriv)) {
+      k <- k-1; break
+    }
+    
+    # Move in the opposite direction of the grad
+    xmat[ ,k] <- xmat[ ,k-1] - step.size * grad.cur
+  }
+  
+  xmat <- xmat[ ,1:k] # Trim
+  return(list(x = xmat[,k], xmat = xmat, k = k))
+}
+
+gd = grad.descent(huber.loss, x0 = rep(0, p), max.iter = 200, step.size = 0.001, stopping.deriv = 0.1)
+gd$k
+gd$x
+
+```
+
+It took 127 iterations to converge. Final coefficient estimates are shown in the output 
+
+
+________________________________
+
+
+
+**(5)**
+```{r}
+iterations = gd$k
+xval = c(1:iterations)
+x.mat = gd$xmat
+obj <- apply(x.mat[, 1:iterations], 2, huber.loss)
+plot(xval, obj, type = "l", xlab = "Iteration Number", ylab = "Objective Function", main = "Objective function against iteration number")
+```
+
+
+Till 40 or so iterations, the objective function decreases sharply. However in later iterations the progress slows down and the obj function doesn't decrease as quickly - alsmot seems to remain constant after 40 or so iterations.
+
+
+___________________________________
+
+
+
+**(6)**
+```{r}
+gd.new = grad.descent(huber.loss, x0 = rep(0, p), max.iter = 200, step.size = 0.1, stopping.deriv = 0.1)
+
+iterations.new = gd.new$k
+
+gd.new$x
+iterations.new
+
+
+xval.new = c((iterations.new-49):iterations.new)
+
+obj <- apply(gd.new$xmat[, 1:iterations.new], 2, huber.loss)
+
+plot(xval.new, obj[(iterations.new-49):iterations.new], type = "l", xlab = "Iteration Number", ylab = "Objective Function", main = "Objective function against iteration number")
+```
+
+It is clear from the plot that the gradient descent algorithm has failed to converge with the step size of 0.1 in the last 50 iterations. 
+
+No, the criterion is not decreasing with each step and hasn't converged at the end. It seems to oscilate between values and doesn't settle on a single criterion value.
+
+The coeffcieint estimates also oscillate between negative and positive values. This is confirmed by the xmat values in gd.
+
+
+_________________________
+
+
+
+**(7)**
+```{r}
+gd$x
+b
+
+sparse.grad.descent <- function(f, x0, max.iter = 200, step.size = 0.05, stopping.deriv = 0.01, ...) {
+  
+  n    <- length(x0)
+  xmat <- matrix(0, nrow = n, ncol = max.iter)
+  xmat[,1] <- x0
+  
+  for (k in 2:max.iter) {
+    # Calculate the gradient
+    grad.cur <- grad(f, xmat[ ,k-1], ...) 
+    
+    # Should we stop?
+    if (all(abs(grad.cur) < stopping.deriv)) {
+      k <- k-1; break
+    }
+    
+    # Move in the opposite direction of the grad
+    thr <- xmat[ ,k-1] - step.size * grad.cur
+    thr[abs(thr) < 0.05] <- 0
+    xmat[ ,k] <- thr
+  }
+  
+  xmat <- xmat[ ,1:k] # Trim
+  return(list(x = xmat[,k], xmat = xmat, k = k))
+}
+
+gd.sparse = sparse.grad.descent(huber.loss, x0 = rep(0, p), max.iter = 200, step.size = 0.001, stopping.deriv = 0.1)
+
+gd.sparse$k
+gd.sparse$x
+
+```
+
+
+
+_______________________
+
+
+
+**(8)**
+```{r}
+fit = lm(y~-1+x)
+fit$coefficients
+
+gd$x
+
+gd.sparse$x
+
+```
+
+
+
+
+
+The coefficients obtained by fitting a linear model match closest to those obtained by the gradient descent in (4). The results are not similar to those obtained by sparse gradient descent in (7) since a linear model doesn't output the sparse result.
+
+
+
+
+
+```{r}
+mse.lm = mean((b-fit$coefficients)^2)
+mse.lm
+
+mse.gd = mean((b-gd$x)^2)
+mse.gd
+
+mse.sparse.gd = mean((b-gd.sparse$x)^2)
+mse.sparse.gd
+```
+
+Thw sparse gd gives the best results in terms of MSE (lowest MSE)
+
+
+____________________________
+
+
+
+**(9)**
+```{r}
+set.seed(10)
+y = x%*% b + rt(n, df=2)
+
+gd <- grad.descent(huber.loss, x0 = rep(0,p), max.iter=200, step.size=0.001, stopping.deriv=0.1)
+gd$x
+
+
+gd.sparse = sparse.grad.descent(huber.loss, x0 = rep(0, p), max.iter = 200, step.size = 0.001, stopping.deriv = 0.1)
+gd.sparse$x
+
+mse.gd = mean((b-gd$x)^2)
+mse.gd
+
+mse.sparse.gd = mean((b-gd.sparse$x)^2)
+mse.sparse.gd
+```
+
+The estimates found by regular gd in this case are close to the actual values. For sparse gd, we expected values below the threshold to be converted to 0 which is the case here. However we also observe that the value for the 1st estimate is 0.
+
+In this case we see that the mse obtained by running the regular gd is lower than mse of sparse.gd. 
+
+This suggests high variablity in the estimates of sparse.gd. 
+
+
+
+_________________________________
+
+
+
+
+**(10)**
+```{r}
+all.mse.gd = rep(NA, 10)
+all.mse.sparse = rep(NA, 10)
+
+mse.calc = function(est) {
+  return(mean((b-est)^2))
+}
+
+for (i in 1:10) {
+  y = x%*% b + rt(n, df=2)
+  
+  gd <- grad.descent(huber.loss, x0 = rep(0,p), max.iter=200, step.size=0.001, stopping.deriv=0.1)
+
+  gd.sparse = sparse.grad.descent(huber.loss, x0 = rep(0, p), max.iter = 200, step.size = 0.001, stopping.deriv = 0.1)
+  
+  all.mse.gd[i] = mse.calc(gd$x)
+  all.mse.sparse[i] = mse.calc(gd.sparse$x)
+}
+
+mean(all.mse.gd)
+min(all.mse.gd)
+
+mean(all.mse.sparse)
+min(all.mse.sparse)
+```
+
+The average mse of the regular gd is lower than that of the sparse gd. However, in 10 iterations, the minimum of mse for sparse gd is much smaller than the minimum of mse for regular gd. 
+
+This confirms the fact that sparse gd has higher variability. 

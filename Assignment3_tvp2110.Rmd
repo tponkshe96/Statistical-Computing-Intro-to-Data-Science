@@ -1,0 +1,137 @@
+---
+title: "Assignment 3"
+author: "Tushar Ponkshe, tvp2110"
+date: "October 11, 2018"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+**ii. (a)**
+```{r}
+setwd("C:/Users/tusha/OneDrive/Documents/Columbia Fall 2018 Courses/STAT COMP & INTRO TO DATA SCIENCE/Datasets")
+nets1819 = readLines("NetsSchedule1819.html", warn = FALSE)
+length(nets1819)
+```
+
+**ii. (b)**
+```{r}
+sum(nchar(nets1819))
+```
+
+**ii. (c)**
+```{r}
+max(nchar(nets1819))
+```
+
+**iii**
+Who and when are they playing first? Who and when are they playing last?
+Nets first play Detroit Pistons on Wed, Oct 17, 2018 at 7:00 PM and last play Miami Heat on Wed, Apr 10, 2019 at   8:00 PM
+
+**iv**
+Line 64 contains information about the games of the regular season
+
+**v**
+Regular expression to extract the line that contains the time, location, and opponent of all games
+```{r}
+
+#time format is "time":"2018-10-17T23:00Z"
+#location format is "location":"Brooklyn","links":"......"
+#opponent format is "opponent":{"id":"8","abbrev":"DET","displayName":"Detroit...
+line64 <- nets1819[64]
+time.expr <- "[0-9]{1}[:][0-9]{2}\\s[P][M]"
+grep(time.expr, nets1819)
+#time <- regmatches(nets1819, regexpr(time.expr, nets1819))
+opponent.expr <- '/[a-z]*[-]*[a-z]+\"[>][A-Z]{1,2}\\s*[A-Z]*[a-z]*'
+grep(opponent.expr, nets1819)
+#regmatches(nets1819, regexpr(opponent.expr, nets1819))
+location.expr <- "\"location\":\"[A-Z]+[a-z]*\""
+grep(location.expr, nets1819)
+```
+
+**vii**
+```{r}
+date.expr <- "[A-Z]{1}[a-z]{2}[[:punct:]]\\s[A-Z]{1}[a-z]{2}\\s[0-9]{1,2}"
+lines = gregexpr(date.expr, nets1819)
+line64_82 = lines[[64]]
+line64_82
+```
+It contains 82 lines and as seen later in (vi), every line contains information of a single game. Confirmed also that the first and the last games match the ones found in (ii) (see vi output).
+
+
+**viii**
+```{r}
+date <- regmatches(line64, gregexpr(date.expr, line64))
+date
+```
+
+**vi**
+Write a regular expression to split the whole line into 82 lines, with each line displaying the information of one game. (You may obtain some hint from problem (vii).
+Information is date, time, opponent.
+```{r}
+loc <- gregexpr(date.expr,nets1819)
+vec = c()
+for (i in 1:81) {
+  vec[i] = substr(line64, loc[[64]][i], loc[[64]][i+1])
+}
+last = substr(line64, 243061, 243061+1210)
+vec[82] = last
+head(vec,3)
+tail(vec, 3)
+length(vec)
+```
+The 64th line containing information on all the games is split into 82 lines each containing information on single games. As from code output, the first game is on Wed, Oct 17 and the last game is on Wed, Apr 10.
+
+
+**ix**
+```{r}
+time <- regmatches(line64, gregexpr(time.expr, line64))
+time
+```
+
+**x**
+```{r}
+# [<][i-l]{2}\\s[a-z]{5}[=]\\"[a-z]{4}[-][a-z]{6}\\"[>][@|v]
+
+  
+home.expr <- '[<]div class=\"flex items-center opponent-logo\"><span class=\"pr2\">[@|vs]'
+homeaway <- regmatches(line64, gregexpr(home.expr, line64))
+homeaway <- homeaway[[1]]
+homeboolean <- (substr(homeaway, nchar(homeaway[1]), nchar(homeaway[1])) == "v")
+home = c()
+for (i in 1:82) {
+  home[i] = as.numeric(homeboolean[i])
+}
+home
+```
+
+**xi**
+```{r}
+opponent.expr <- '/[a-z]*[-]*[a-z]+[-][6,7]*[a-z]+\">[A-Z]{1,2}\\s*[A-Z]*[a-z]*\\s*[A-Z]*[a-z]*'
+opponent.info <- (regmatches(nets1819, gregexpr(opponent.expr, nets1819)))[[64]]
+
+want <- '[A-Z]{1,2}[a-z]*[-]*[6-7]*[a-z]*\\s*[A-Z]*[a-z]*'
+opponent.info1 <- regmatches(opponent.info, gregexpr(want, opponent.info))
+
+opponent = c()
+
+for (i in 1:82) {
+  opponent[i] = opponent.info1[[i]]
+}
+
+head(opponent)
+tail(opponent)
+length(opponent)
+```
+
+**xii**
+```{r}
+data.frame(date, time, opponent, home)[1:10,]
+```
+The display format is a bit weird, but you can see that the first 10 games in the output match the first 10 games as seen on the website.
